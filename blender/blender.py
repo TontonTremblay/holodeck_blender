@@ -9,6 +9,58 @@ import glob
 # from PIL import Image
 # import png 
 import threading
+import bmesh
+
+def create_wall_mesh(name, vertices):
+    # Create a new mesh
+    mesh = bpy.data.meshes.new(name)
+    obj = bpy.data.objects.new(name + "_Object", mesh)
+
+    # Link the object to the scene
+    scene = bpy.context.scene
+    scene.collection.objects.link(obj)
+
+    # Make the new object the active object
+    bpy.context.view_layer.objects.active = obj
+    obj.select_set(True)
+
+    # Enter Edit mode to create the wall geometry
+    bpy.ops.object.mode_set(mode='EDIT')
+
+    # Create a BMesh
+    bm = bmesh.new()
+
+    # Create the vertices
+    for v in vertices:
+        bm.verts.new(v)
+
+    # Ensure the lookup table is updated
+    bm.verts.ensure_lookup_table()
+
+
+    # Create the edges between consecutive vertices
+    for i in range(len(vertices)-1):
+        bm.edges.new([bm.verts[i], bm.verts[i+1]])
+
+    # Create the face (assuming a closed loop)
+    bm.faces.new(bm.verts)
+
+    bpy.ops.object.mode_set(mode='OBJECT')
+
+
+    # Update the mesh with the BMesh data
+    bm.to_mesh(mesh)
+    bm.free()
+
+###################
+###################
+###################
+###################
+###################
+###################
+###################
+###################
+###################
 
 parser = argparse.ArgumentParser(description='Renders given obj file by rotation a camera around it.')
 
@@ -52,9 +104,43 @@ with open(opt.json, 'r') as file:
     data = json.load(file)
 
 
+def add_wall(wall):
+    wall_vertices = []
+    eps = 0.005
+    for vert in wall['polygon']:
+        wall_vertices.append((vert['x'],vert['z'],vert['y']))
+    wall_vertices = np.array(wall_vertices)
+
+    if 'west' in wall['id']:
+        wall_vertices[:,0]-=eps
+    if 'east' in wall['id']:
+        wall_vertices[:,0]+=eps
+    if 'north' in wall['id']:
+        wall_vertices[:,1]+=eps
+    if 'south' in wall['id']:
+        wall_vertices[:,1]-=eps
+
+    if 'west' in wall['id'] and 'exterior' in wall['id']:
+        wall_vertices[:,0]-=eps*2
+    if 'east' in wall['id'] and 'exterior' in wall['id']:
+        wall_vertices[:,0]+=eps*2
+    if 'north' in wall['id'] and 'exterior' in wall['id']:
+        wall_vertices[:,1]+=eps*2
+    if 'south' in wall['id'] and 'exterior' in wall['id']:
+        wall_vertices[:,1]-=eps*2
+
+    create_wall_mesh(wall['id'],wall_vertices)    
 
 
+for wall in data['walls']:
+    add_wall(wall)
 
+for floor in data['rooms']:
+    floor_vertices = []
+    for vert in floor['vertices']:
+        floor_vertices.append((vert[0],vert[1],0))
+    floor_vertices = np.array(floor_vertices)
+    create_wall_mesh(floor['id'],floor_vertices)
 
 
 
