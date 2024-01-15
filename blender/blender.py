@@ -161,6 +161,34 @@ def create_cube(name, min_xyz, max_xyz,location,rotate=False):
     return cube
 
 
+def find_closest_point(points):
+    if not points:
+        return None  # Return None if the list is empty
+
+    # Calculate the distance from each point to the origin (0, 0, 0)
+    distances = [math.sqrt(p['x']**2 + p['y']**2 + p['z']**2) for p in points]
+
+    # Find the index of the minimum distance
+    min_distance_index = distances.index(min(distances))
+
+    # Return the closest point
+    return points[min_distance_index]
+
+
+def subtract_objects(obj_to_subtract, obj_to_subtract_from):
+
+    bpy.context.view_layer.objects.active = obj_to_subtract
+    obj_to_subtract.select_set(True)
+
+    mod = obj_to_subtract.modifiers.new("Boolean", type='BOOLEAN')
+    mod.operation = 'DIFFERENCE'
+    mod.object = obj_to_subtract_from
+
+    # large cube has context.
+    bpy.ops.object.modifier_apply(modifier=mod.name)
+
+    # context.scene.objects.unlink(obj_to_subtract_from)
+
 #########################
 #########################
 #########################
@@ -189,6 +217,8 @@ for floor in data['rooms']:
 for door in data['doors']:
     wall = wall_by_id[door['wall1']]
     eps = 0.1
+    pos = find_closest_point(wall['polygon'])
+
     if 'east' in door['wall0'] or 'west' in door['wall0']:
         asset = create_cube(door['id'],
             [
@@ -202,9 +232,9 @@ for door in data['doors']:
                 door["holePolygon"][1]['y']
             ],
             [
-                door['assetPosition']['z']+wall['polygon'][0]['x'],
-                door['assetPosition']['x']+wall['polygon'][0]['z'],
-                door['assetPosition']['y']+wall['polygon'][0]['y']
+                door['assetPosition']['z']+pos['x'],
+                door['assetPosition']['x']+pos['z'],
+                door['assetPosition']['y']+pos['y']
             ],
             # rotate = True
         )
@@ -222,19 +252,22 @@ for door in data['doors']:
                 door["holePolygon"][1]['y']
             ],
             [
-                door['assetPosition']['x']+wall['polygon'][0]['x'],
-                door['assetPosition']['z']+wall['polygon'][0]['z'],
-                door['assetPosition']['y']+wall['polygon'][0]['y']
+                door['assetPosition']['x']+pos['x'],
+                door['assetPosition']['z']+pos['z'],
+                door['assetPosition']['y']+pos['y']
             ]
         )
 
     # asset.parent = bpy.data.objects[door['wall0']]
     # asset.parent_type = 'OBJECT'
+    subtract_objects(bpy.data.objects[door['wall0']],asset)
+    subtract_objects(bpy.data.objects[door['wall1']],asset)
+    bpy.data.objects.remove(asset)
 
 for window in data['windows']:
     wall = wall_by_id[window['wall1']]
     eps = 0.1
-
+    pos = find_closest_point(wall['polygon'])
     if 'east' in window['wall0'] or 'west' in window['wall0']:
         asset = create_cube(window['id'],
             [
@@ -248,9 +281,9 @@ for window in data['windows']:
                 window["holePolygon"][1]['y']
             ],
             [
-                window['assetPosition']['z']+wall['polygon'][0]['x'],
-                window['assetPosition']['x']+wall['polygon'][0]['z'],
-                window['assetPosition']['y']+wall['polygon'][0]['y']
+                window['assetPosition']['z']+pos['x'],
+                window['assetPosition']['x']+pos['z'],
+                window['assetPosition']['y']+pos['y']
             ],
             # rotate = True
         )
@@ -268,12 +301,14 @@ for window in data['windows']:
                 window["holePolygon"][1]['y']
             ],
             [
-                window['assetPosition']['x']+wall['polygon'][0]['x'],
-                window['assetPosition']['z']+wall['polygon'][0]['z'],
-                window['assetPosition']['y']+wall['polygon'][0]['y']
+                window['assetPosition']['x']+pos['x'],
+                window['assetPosition']['z']+pos['z'],
+                window['assetPosition']['y']+pos['y']
             ]
         )
-
-
+    subtract_objects(bpy.data.objects[window['wall0']],asset)
+    subtract_objects(bpy.data.objects[window['wall1']],asset)
+    bpy.data.objects.remove(asset)
+    
 
 bpy.ops.wm.save_as_mainfile(filepath=opt.output)
