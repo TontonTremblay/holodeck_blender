@@ -14,7 +14,7 @@ import bmesh
 def create_wall_mesh(name, vertices):
     # Create a new mesh
     mesh = bpy.data.meshes.new(name)
-    obj = bpy.data.objects.new(name + "_Object", mesh)
+    obj = bpy.data.objects.new(name, mesh)
 
     # Link the object to the scene
     scene = bpy.context.scene
@@ -131,9 +131,51 @@ def add_wall(wall):
 
     create_wall_mesh(wall['id'],wall_vertices)    
 
+def create_cube(name, min_xyz, max_xyz,location,rotate=False):
+    # Calculate dimensions of the cube
+    print(min_xyz)
+    print(max_xyz)
+    dimensions = [max_xyz[i] - min_xyz[i] for i in range(3)]
+
+    # Calculate location of the cube
+    # location = [(max_xyz[i] + min_xyz[i]) / 2 for i in range(3)]
+
+    # Create the cube object
+    bpy.ops.mesh.primitive_cube_add(size=1, location=location)
+    cube = bpy.context.active_object
+
+    # Resize the cube to the specified dimensions
+    cube.dimensions = dimensions
+
+    if rotate:
+        bpy.context.view_layer.objects.active = cube
+        bpy.ops.transform.rotate(value=math.radians(90), orient_axis='Z')
+
+
+    # cube.location.x += assetPosition[0]
+    # cube.location.y += assetPosition[2]
+    # cube.location.z += assetPosition[1]
+    # Set the cube name
+    cube.name = name
+
+    return cube
+
+
+#########################
+#########################
+#########################
+#########################
+#########################
+#########################
+#########################
+
+
+
+wall_by_id = {}
 
 for wall in data['walls']:
     add_wall(wall)
+    wall_by_id[wall['id']]=wall
 
 for floor in data['rooms']:
     floor_vertices = []
@@ -143,6 +185,94 @@ for floor in data['rooms']:
     create_wall_mesh(floor['id'],floor_vertices)
 
 
+
+for door in data['doors']:
+    wall = wall_by_id[door['wall1']]
+    eps = 0.1
+    if 'east' in door['wall0'] or 'west' in door['wall0']:
+        asset = create_cube(door['id'],
+            [
+                door["holePolygon"][0]['z']-eps,
+                door["holePolygon"][0]['x'],
+                door["holePolygon"][0]['y']
+            ],
+            [
+                door["holePolygon"][1]['z']+eps,
+                door["holePolygon"][1]['x'],
+                door["holePolygon"][1]['y']
+            ],
+            [
+                door['assetPosition']['z']+wall['polygon'][0]['x'],
+                door['assetPosition']['x']+wall['polygon'][0]['z'],
+                door['assetPosition']['y']+wall['polygon'][0]['y']
+            ],
+            # rotate = True
+        )
+    else:
+
+        asset = create_cube(door['id'],
+            [
+                door["holePolygon"][0]['x'],
+                door["holePolygon"][0]['z']-eps,
+                door["holePolygon"][0]['y']
+            ],
+            [
+                door["holePolygon"][1]['x'],
+                door["holePolygon"][1]['z']+eps,
+                door["holePolygon"][1]['y']
+            ],
+            [
+                door['assetPosition']['x']+wall['polygon'][0]['x'],
+                door['assetPosition']['z']+wall['polygon'][0]['z'],
+                door['assetPosition']['y']+wall['polygon'][0]['y']
+            ]
+        )
+
+    # asset.parent = bpy.data.objects[door['wall0']]
+    # asset.parent_type = 'OBJECT'
+
+for window in data['windows']:
+    wall = wall_by_id[window['wall1']]
+    eps = 0.1
+
+    if 'east' in window['wall0'] or 'west' in window['wall0']:
+        asset = create_cube(window['id'],
+            [
+                window["holePolygon"][0]['z']-eps,
+                window["holePolygon"][0]['x'],
+                window["holePolygon"][0]['y']
+            ],
+            [
+                window["holePolygon"][1]['z']+eps,
+                window["holePolygon"][1]['x'],
+                window["holePolygon"][1]['y']
+            ],
+            [
+                window['assetPosition']['z']+wall['polygon'][0]['x'],
+                window['assetPosition']['x']+wall['polygon'][0]['z'],
+                window['assetPosition']['y']+wall['polygon'][0]['y']
+            ],
+            # rotate = True
+        )
+
+    else:
+        asset = create_cube(window['id'],
+            [
+                window["holePolygon"][0]['x'],
+                window["holePolygon"][0]['z']-eps,
+                window["holePolygon"][0]['y']
+            ],
+            [
+                window["holePolygon"][1]['x'],
+                window["holePolygon"][1]['z']+eps,
+                window["holePolygon"][1]['y']
+            ],
+            [
+                window['assetPosition']['x']+wall['polygon'][0]['x'],
+                window['assetPosition']['z']+wall['polygon'][0]['z'],
+                window['assetPosition']['y']+wall['polygon'][0]['y']
+            ]
+        )
 
 
 
