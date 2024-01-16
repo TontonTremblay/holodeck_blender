@@ -5,13 +5,13 @@ parser = argparse.ArgumentParser(description='make_scene')
 parser.add_argument(
     '--save_file', 
     type=str, 
-    default='/Users/jtremblay/code/holodeck_blender/scene.blend',
+    default='./scene.blend',
     help='path for saving rendered image'
 )
 parser.add_argument(
     '--json', 
     type=str, 
-    default='/Users/jtremblay/code/holodeck_blender/data/example.json',
+    default='./data/example.json',
     help='path for saving rendered image'
 )
 parser.add_argument(
