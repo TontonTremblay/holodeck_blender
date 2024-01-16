@@ -3,9 +3,9 @@ import bpy
 from mathutils import Vector, Matrix
 import mathutils
 import numpy as np
-import json 
-import random 
-import glob 
+import json
+import random
+import glob
 # from PIL import Image
 # import png 
 import threading
@@ -309,6 +309,6 @@ for window in data['windows']:
     subtract_objects(bpy.data.objects[window['wall0']],asset)
     subtract_objects(bpy.data.objects[window['wall1']],asset)
     bpy.data.objects.remove(asset)
-    
+
 
 bpy.ops.wm.save_as_mainfile(filepath=opt.output)
