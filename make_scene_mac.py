@@ -20,6 +20,12 @@ parser.add_argument(
     default='/Applications/Blender.app/Contents/MacOS/Blender',
     help='path to blender executable'
     )
+parser.add_argument(
+    '--content_folder', 
+    type=str, 
+    default='./assets/',
+    help='path to blender executable'
+    )
 opt = parser.parse_args()
 
 
@@ -27,7 +33,8 @@ opt = parser.parse_args()
 # get all the file
 import glob 
 
-render_cmd = f'{opt.blender_root} -b -P blender/blender.py -- --output {opt.save_file} --json {opt.json}' 
+render_cmd = f'{opt.blender_root} -b -P blender/blender.py -- --output {opt.save_file} --json {opt.json} \
+                --content {opt.content_folder}' 
 
 # render_cmd = render_cmd + ' > tmp.out'
 

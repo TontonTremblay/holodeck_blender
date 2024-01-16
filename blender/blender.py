@@ -75,6 +75,11 @@ parser.add_argument(
     help='path to the json to load from holodeck'
 )
 
+parser.add_argument(
+    '--content',
+    help='path to content for loading windows and doors'
+)
+
 
 argv = sys.argv[sys.argv.index("--") + 1:]
 opt = parser.parse_args(argv)
@@ -189,6 +194,31 @@ def subtract_objects(obj_to_subtract, obj_to_subtract_from):
 
     # context.scene.objects.unlink(obj_to_subtract_from)
 
+def import_glb(file_path, location=(0, 0, 0), rotation=(0, 0, 0), scale=(0.01, 0.01, 0.01)):
+    if not os.path.exists(file_path):
+        return None
+    # Import GLB file
+    bpy.ops.import_scene.gltf(filepath=file_path)
+
+    # Get the imported object
+    imported_object = bpy.context.selected_objects[0]
+
+    # Set the location, rotation, and scale
+    # imported_object.location = location
+    imported_object.rotation_euler = rotation
+    imported_object.scale = scale
+
+    # offset = -imported_object.location
+    bpy.context.view_layer.objects.active = imported_object
+    bpy.ops.object.origin_set(type='GEOMETRY_ORIGIN', center='BOUNDS')
+
+    # Apply the offset to keep the specified location
+    # imported_object.location += offset
+    imported_object.location = location
+
+
+    return imported_object
+
 #########################
 #########################
 #########################
@@ -223,50 +253,67 @@ for entry in doors_windows:
     wall = wall_by_id[entry['wall1']]
     eps = 0.1
     pos = find_closest_point(wall['polygon'])
+    rotate = False
 
     if 'east' in entry['wall0'] or 'west' in entry['wall0']:
-        asset = create_cube(entry['id'],
-            [
-                entry["holePolygon"][0]['z']-eps,
-                entry["holePolygon"][0]['x'],
-                entry["holePolygon"][0]['y']
-            ],
-            [
-                entry["holePolygon"][1]['z']+eps,
-                entry["holePolygon"][1]['x'],
-                entry["holePolygon"][1]['y']
-            ],
-            [
+        pos = [
                 entry['assetPosition']['z']+pos['x'],
                 entry['assetPosition']['x']+pos['z'],
                 entry['assetPosition']['y']+pos['y']
-            ],
-            # rotate = True
-        )
-    else:
+        ]
 
         asset = create_cube(entry['id'],
             [
-                entry["holePolygon"][0]['x'],
                 entry["holePolygon"][0]['z']-eps,
+                entry["holePolygon"][0]['x'],
                 entry["holePolygon"][0]['y']
             ],
             [
-                entry["holePolygon"][1]['x'],
                 entry["holePolygon"][1]['z']+eps,
+                entry["holePolygon"][1]['x'],
                 entry["holePolygon"][1]['y']
             ],
-            [
+            pos
+        )
+
+        rotate = True
+
+    else:
+        pos = [
                 entry['assetPosition']['x']+pos['x'],
                 entry['assetPosition']['z']+pos['z'],
                 entry['assetPosition']['y']+pos['y']
             ]
-        )
+        asset = create_cube(entry['id'],
+            [
+                entry["holePolygon"][0]['x'],
+                entry["holePolygon"][0]['z']-eps,
+                entry["holePolygon"][0]['y']
+            ],
+            [
+                entry["holePolygon"][1]['x'],
+                entry["holePolygon"][1]['z']+eps,
+                entry["holePolygon"][1]['y']
+            ],
+            pos
 
+        )
+    for ibj in bpy.data.objects:
+        print(ibj.name)
     subtract_objects(bpy.data.objects[entry['wall0']],asset)
     subtract_objects(bpy.data.objects[entry['wall1']],asset)
     bpy.data.objects.remove(asset)
 
+    # load the asset
+    asset_loaded = import_glb(f"{opt.content}/{entry['id'].split('|')[0]}s/{entry['assetId'].lower()}.glb",
+        location=pos)
+    if asset_loaded:
+        asset_loaded.name = entry['id']
+        if rotate:
+            bpy.context.view_layer.objects.active = asset_loaded
+            bpy.ops.transform.rotate(value=math.radians(90), orient_axis='Z')
+
+    # bpy.ops.wm.save_as_mainfile(filepath=opt.output)
 
 
 bpy.ops.wm.save_as_mainfile(filepath=opt.output)
