@@ -3,9 +3,9 @@ import bpy
 from mathutils import Vector, Matrix
 import mathutils
 import numpy as np
-import json 
-import random 
-import glob 
+import json
+import random
+import glob
 # from PIL import Image
 # import png 
 import threading
@@ -314,6 +314,7 @@ for entry in doors_windows:
             bpy.ops.transform.rotate(value=math.radians(90), orient_axis='Z')
 
     # bpy.ops.wm.save_as_mainfile(filepath=opt.output)
+
 
 
 bpy.ops.wm.save_as_mainfile(filepath=opt.output)

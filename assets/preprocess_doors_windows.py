@@ -136,6 +136,9 @@ def export_objects(obj, export_directory, prefix="doorway_"):
 
         # Select the object
         obj.select_set(True)
+        for child in obj.children_recursive:
+            if child.type == 'MESH':
+                child.select_set(True)
 
         # Set as the active object
         bpy.context.view_layer.objects.active = obj
@@ -156,8 +159,8 @@ def export_objects(obj, export_directory, prefix="doorway_"):
 
 
 if __name__ == "__main__":
-    preprocess_door = False
-    preprocess_window = True
+    preprocess_door = True
+    preprocess_window = False
 
     if preprocess_door:
         fbx_file_path = './doors/doorways_grp.fbx'
@@ -168,7 +171,6 @@ if __name__ == "__main__":
         # Import the .fbx file
         bpy.ops.import_scene.fbx(filepath=fbx_file_path)
 
-        # Replace 'doorway_tertiary_mat' with the new glass material in all objects
         set_white_material_to_all("doorway_primary_mat")
         set_metal_material_to_all("doorway_secondary_mat")
         set_glass_material_to_all("doorway_tertiary_mat")
@@ -187,7 +189,6 @@ if __name__ == "__main__":
         # Import the .fbx file
         bpy.ops.import_scene.fbx(filepath=fbx_file_path)
 
-        # Replace 'doorway_tertiary_mat' with the new glass material in all objects
         set_white_material_to_all("window_primary_mat")
         set_glass_material_to_all("window_secondary_mat")
         set_metal_material_to_all("window_tertiary_mat")
