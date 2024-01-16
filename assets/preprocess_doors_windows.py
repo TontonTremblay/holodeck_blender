@@ -1,5 +1,7 @@
 import bpy
 import os
+import bmesh
+from mathutils import Vector
 
 
 def set_white_material_to_all(material_name):
@@ -124,6 +126,13 @@ def set_glass_material_to_all(material_name):
                     slot.material = glass_material
 
 
+def find_mesh_objects(obj, mesh_objects):
+    """Recursively find mesh objects under the given object."""
+    if obj.type == 'MESH':
+        mesh_objects.append(obj)
+    #for child in obj.children:
+    #    find_mesh_objects(child, mesh_objects)
+
 # Example usage
 def export_objects(obj, export_directory, prefix="doorway_"):
     """
@@ -142,6 +151,8 @@ def export_objects(obj, export_directory, prefix="doorway_"):
 
         # Set as the active object
         bpy.context.view_layer.objects.active = obj
+
+        bpy.ops.object.origin_set(type='GEOMETRY_ORIGIN', center='MEDIAN')
 
         export_path = os.path.join(export_directory, f"{obj.name}.gltf")
          # Export settings
@@ -195,4 +206,4 @@ if __name__ == "__main__":
 
         # Iterate through all objects and export recursively
         for obj in bpy.context.scene.objects:
-            export_objects(obj, export_directory, prefix="window_")
+           export_objects(obj, export_directory, prefix="window_")
