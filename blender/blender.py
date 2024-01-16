@@ -212,103 +212,61 @@ for floor in data['rooms']:
     floor_vertices = np.array(floor_vertices)
     create_wall_mesh(floor['id'],floor_vertices)
 
+doors_windows = []
+for entry in data['doors']:
+    doors_windows.append(entry)
 
+for entry in data['windows']:
+    doors_windows.append(entry)
 
-for door in data['doors']:
-    wall = wall_by_id[door['wall1']]
+for entry in doors_windows:
+    wall = wall_by_id[entry['wall1']]
     eps = 0.1
     pos = find_closest_point(wall['polygon'])
 
-    if 'east' in door['wall0'] or 'west' in door['wall0']:
-        asset = create_cube(door['id'],
+    if 'east' in entry['wall0'] or 'west' in entry['wall0']:
+        asset = create_cube(entry['id'],
             [
-                door["holePolygon"][0]['z']-eps,
-                door["holePolygon"][0]['x'],
-                door["holePolygon"][0]['y']
+                entry["holePolygon"][0]['z']-eps,
+                entry["holePolygon"][0]['x'],
+                entry["holePolygon"][0]['y']
             ],
             [
-                door["holePolygon"][1]['z']+eps,
-                door["holePolygon"][1]['x'],
-                door["holePolygon"][1]['y']
+                entry["holePolygon"][1]['z']+eps,
+                entry["holePolygon"][1]['x'],
+                entry["holePolygon"][1]['y']
             ],
             [
-                door['assetPosition']['z']+pos['x'],
-                door['assetPosition']['x']+pos['z'],
-                door['assetPosition']['y']+pos['y']
+                entry['assetPosition']['z']+pos['x'],
+                entry['assetPosition']['x']+pos['z'],
+                entry['assetPosition']['y']+pos['y']
             ],
             # rotate = True
         )
     else:
 
-        asset = create_cube(door['id'],
+        asset = create_cube(entry['id'],
             [
-                door["holePolygon"][0]['x'],
-                door["holePolygon"][0]['z']-eps,
-                door["holePolygon"][0]['y']
+                entry["holePolygon"][0]['x'],
+                entry["holePolygon"][0]['z']-eps,
+                entry["holePolygon"][0]['y']
             ],
             [
-                door["holePolygon"][1]['x'],
-                door["holePolygon"][1]['z']+eps,
-                door["holePolygon"][1]['y']
+                entry["holePolygon"][1]['x'],
+                entry["holePolygon"][1]['z']+eps,
+                entry["holePolygon"][1]['y']
             ],
             [
-                door['assetPosition']['x']+pos['x'],
-                door['assetPosition']['z']+pos['z'],
-                door['assetPosition']['y']+pos['y']
+                entry['assetPosition']['x']+pos['x'],
+                entry['assetPosition']['z']+pos['z'],
+                entry['assetPosition']['y']+pos['y']
             ]
         )
 
-    # asset.parent = bpy.data.objects[door['wall0']]
-    # asset.parent_type = 'OBJECT'
-    subtract_objects(bpy.data.objects[door['wall0']],asset)
-    subtract_objects(bpy.data.objects[door['wall1']],asset)
+    subtract_objects(bpy.data.objects[entry['wall0']],asset)
+    subtract_objects(bpy.data.objects[entry['wall1']],asset)
     bpy.data.objects.remove(asset)
 
-for window in data['windows']:
-    wall = wall_by_id[window['wall1']]
-    eps = 0.1
-    pos = find_closest_point(wall['polygon'])
-    if 'east' in window['wall0'] or 'west' in window['wall0']:
-        asset = create_cube(window['id'],
-            [
-                window["holePolygon"][0]['z']-eps,
-                window["holePolygon"][0]['x'],
-                window["holePolygon"][0]['y']
-            ],
-            [
-                window["holePolygon"][1]['z']+eps,
-                window["holePolygon"][1]['x'],
-                window["holePolygon"][1]['y']
-            ],
-            [
-                window['assetPosition']['z']+pos['x'],
-                window['assetPosition']['x']+pos['z'],
-                window['assetPosition']['y']+pos['y']
-            ],
-            # rotate = True
-        )
 
-    else:
-        asset = create_cube(window['id'],
-            [
-                window["holePolygon"][0]['x'],
-                window["holePolygon"][0]['z']-eps,
-                window["holePolygon"][0]['y']
-            ],
-            [
-                window["holePolygon"][1]['x'],
-                window["holePolygon"][1]['z']+eps,
-                window["holePolygon"][1]['y']
-            ],
-            [
-                window['assetPosition']['x']+pos['x'],
-                window['assetPosition']['z']+pos['z'],
-                window['assetPosition']['y']+pos['y']
-            ]
-        )
-    subtract_objects(bpy.data.objects[window['wall0']],asset)
-    subtract_objects(bpy.data.objects[window['wall1']],asset)
-    bpy.data.objects.remove(asset)
-    
 
 bpy.ops.wm.save_as_mainfile(filepath=opt.output)
