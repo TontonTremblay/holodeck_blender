@@ -136,9 +136,9 @@ def export_objects(obj, export_directory, prefix="doorway_"):
 
         # Select the object
         obj.select_set(True)
-        for child in obj.children_recursive:
-            if child.type == 'MESH':
-                child.select_set(True)
+        #for child in obj.children_recursive:
+        #    if child.type == 'MESH':
+        #        child.select_set(True)
 
         # Set as the active object
         bpy.context.view_layer.objects.active = obj
