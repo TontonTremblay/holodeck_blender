@@ -194,7 +194,7 @@ def subtract_objects(obj_to_subtract, obj_to_subtract_from):
 
     # context.scene.objects.unlink(obj_to_subtract_from)
 
-def import_glb(file_path, location=(0, 0, 0), rotation=(0, 0, 0), scale=(0.01, 0.01, 0.01)):
+def import_glb(file_path, location=(0, 0, 0), rotation=(0, 0, 0), scale=(0.01, 0.01, 0.01),centering=True):
     if not os.path.exists(file_path):
         return None
     # Import GLB file
@@ -209,8 +209,9 @@ def import_glb(file_path, location=(0, 0, 0), rotation=(0, 0, 0), scale=(0.01, 0
     imported_object.scale = scale
 
     # offset = -imported_object.location
-    bpy.context.view_layer.objects.active = imported_object
-    bpy.ops.object.origin_set(type='GEOMETRY_ORIGIN', center='BOUNDS')
+    if centering:
+        bpy.context.view_layer.objects.active = imported_object
+        bpy.ops.object.origin_set(type='GEOMETRY_ORIGIN', center='BOUNDS')
 
     # Apply the offset to keep the specified location
     # imported_object.location += offset
@@ -300,18 +301,116 @@ for entry in doors_windows:
         )
     for ibj in bpy.data.objects:
         print(ibj.name)
+
     subtract_objects(bpy.data.objects[entry['wall0']],asset)
     subtract_objects(bpy.data.objects[entry['wall1']],asset)
     bpy.data.objects.remove(asset)
 
-    # load the asset
-    asset_loaded = import_glb(f"{opt.content}/{entry['id'].split('|')[0]}s/{entry['assetId'].lower()}.glb",
-        location=pos)
-    if asset_loaded:
-        asset_loaded.name = entry['id']
+    if "door" in entry['id'].lower():
+
+        # load doorway
+        if 'double' in entry['assetId'].lower():
+            doorways = glob.glob(f"{opt.content}/doors/doorway_double*.glb")
+        else:
+            doorways = glob.glob(f"{opt.content}/doors/doorway_frame*.glb")
+
+        doorway_path = doorways[np.random.randint(0,len(doorways))]
+        asset_loaded = import_glb(doorway_path,location=pos)
+
         if rotate:
             bpy.context.view_layer.objects.active = asset_loaded
             bpy.ops.transform.rotate(value=math.radians(90), orient_axis='Z')
+
+
+        # door 
+        doors = glob.glob(f"{opt.content}/doors/doorway_door*.glb")
+        door_path = doors[np.random.randint(0,len(doors))]
+        door_loaded = import_glb(door_path,location=(0,0,0),scale=(1,1,1))
+        door_loaded.parent = asset_loaded
+
+        if rotate:
+            bpy.context.view_layer.objects.active = door_loaded
+            bpy.ops.transform.rotate(value=math.radians(90), orient_axis='Y')        
+        else:
+            bpy.context.view_layer.objects.active = asset_loaded
+            bpy.ops.transform.rotate(value=math.radians(90), orient_axis="X")
+
+        bpy.ops.transform.translate(value=(0,0,-0.035))
+
+
+        if 'double' in entry['assetId'].lower():
+            door_loaded_2 = import_glb(door_path,location=(0,0,0),scale=(1,1,1))
+            door_loaded_2.parent = asset_loaded
+
+            if rotate:
+                bpy.context.view_layer.objects.active = door_loaded_2
+                bpy.ops.transform.rotate(value=math.radians(90), orient_axis='Y')        
+
+                # TODO make this work when on the other wall 
+
+
+            else:
+                bpy.context.view_layer.objects.active = door_loaded_2
+                bpy.ops.transform.rotate(value=math.radians(90), orient_axis="X")
+                bpy.ops.transform.resize(value=(-1,1,1))
+                bpy.ops.transform.translate(value=(-door_loaded_2.dimensions[0]/2,0,-0.035))
+                
+                bpy.ops.object.select_all(action='DESELECT')
+                door_loaded.select_set(True)
+                bpy.context.view_layer.objects.active = door_loaded
+                bpy.ops.transform.translate(value=(door_loaded.dimensions[0]/2,0,0))
+
+
+
+        # TO DO ADD OPENING CLOSING THE DOOR. 
+
+
+        # add the handle 
+        handles = glob.glob(f"{opt.content}/doors/doorway_handle*.glb")
+        handle_path = handles[np.random.randint(0,len(handles))]
+        handle_loaded = import_glb(handle_path,location=(0,0,0),scale=(1,1,1),centering=False)        
+        # for handle in handles:
+        #     handle_loaded = import_glb(handle,location=(0,0,0),scale=(1,1,1),centering=False)        
+        # bpy.ops.wm.save_as_mainfile(filepath=opt.output)
+
+        # raise()
+        handle_loaded.parent = door_loaded
+
+        bpy.context.view_layer.objects.active = handle_loaded
+        if rotate:
+            bpy.ops.transform.rotate(value=math.radians(90), orient_axis='Y')   
+            bpy.ops.transform.translate(value=(0,0.384,-0.0848))   
+        else:
+            bpy.ops.transform.rotate(value=math.radians(90), orient_axis='X')   
+            bpy.ops.transform.translate(value=(-0.384,0,-0.0848))   
+
+        if 'double' in entry['assetId'].lower():
+            handle_loaded_2 = import_glb(handle_path,location=(0,0,0),scale=(1,1,1),centering=False)        
+            handle_loaded_2.parent = door_loaded_2
+            bpy.ops.object.select_all(action='DESELECT')
+            handle_loaded_2.select_set(True)
+
+            bpy.context.view_layer.objects.active = handle_loaded_2
+
+            if rotate:
+                bpy.ops.transform.rotate(value=math.radians(90), orient_axis='Y')   
+                bpy.ops.transform.translate(value=(0,0.384,-0.0848))   
+            else:
+                bpy.ops.transform.rotate(value=math.radians(90), orient_axis='X')   
+                bpy.ops.transform.translate(value=(0.384,0,-0.0848))   
+
+
+
+
+    else:
+        # load the asset
+        asset_loaded = import_glb(f"{opt.content}/{entry['id'].split('|')[0]}s/{entry['assetId'].lower()}.glb",
+            location=pos)
+        if asset_loaded:
+            asset_loaded.name = entry['id']
+            if rotate:
+                bpy.context.view_layer.objects.active = asset_loaded
+                bpy.ops.transform.rotate(value=math.radians(90), orient_axis='Z')
 
     # bpy.ops.wm.save_as_mainfile(filepath=opt.output)
 
