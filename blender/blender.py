@@ -330,7 +330,7 @@ for entry in doors_windows:
 
         if rotate:
             bpy.context.view_layer.objects.active = door_loaded
-            bpy.ops.transform.rotate(value=math.radians(90), orient_axis='Y')        
+            bpy.ops.transform.rotate(value=math.radians(90), orient_axis='Y')
         else:
             bpy.context.view_layer.objects.active = asset_loaded
             bpy.ops.transform.rotate(value=math.radians(90), orient_axis="X")
@@ -344,7 +344,7 @@ for entry in doors_windows:
 
             if rotate:
                 bpy.context.view_layer.objects.active = door_loaded_2
-                bpy.ops.transform.rotate(value=math.radians(90), orient_axis='Y')        
+                bpy.ops.transform.rotate(value=math.radians(90), orient_axis='Y')
 
                 # TODO make this work when on the other wall 
 
@@ -354,7 +354,7 @@ for entry in doors_windows:
                 bpy.ops.transform.rotate(value=math.radians(90), orient_axis="X")
                 bpy.ops.transform.resize(value=(-1,1,1))
                 bpy.ops.transform.translate(value=(-door_loaded_2.dimensions[0]/2,0,-0.035))
-                
+
                 bpy.ops.object.select_all(action='DESELECT')
                 door_loaded.select_set(True)
                 bpy.context.view_layer.objects.active = door_loaded
@@ -368,7 +368,7 @@ for entry in doors_windows:
         # add the handle 
         handles = glob.glob(f"{opt.content}/doors/doorway_handle*.glb")
         handle_path = handles[np.random.randint(0,len(handles))]
-        handle_loaded = import_glb(handle_path,location=(0,0,0),scale=(1,1,1),centering=False)        
+        handle_loaded = import_glb(handle_path,location=(0,0,0),scale=(1,1,1),centering=False)
         # for handle in handles:
         #     handle_loaded = import_glb(handle,location=(0,0,0),scale=(1,1,1),centering=False)        
         # bpy.ops.wm.save_as_mainfile(filepath=opt.output)
@@ -378,14 +378,14 @@ for entry in doors_windows:
 
         bpy.context.view_layer.objects.active = handle_loaded
         if rotate:
-            bpy.ops.transform.rotate(value=math.radians(90), orient_axis='Y')   
-            bpy.ops.transform.translate(value=(0,0.384,-0.0848))   
+            bpy.ops.transform.rotate(value=math.radians(90), orient_axis='Y')
+            bpy.ops.transform.translate(value=(0,0.384,-0.0848))
         else:
-            bpy.ops.transform.rotate(value=math.radians(90), orient_axis='X')   
-            bpy.ops.transform.translate(value=(-0.384,0,-0.0848))   
+            bpy.ops.transform.rotate(value=math.radians(90), orient_axis='X')
+            bpy.ops.transform.translate(value=(-0.384,0,-0.0848))
 
         if 'double' in entry['assetId'].lower():
-            handle_loaded_2 = import_glb(handle_path,location=(0,0,0),scale=(1,1,1),centering=False)        
+            handle_loaded_2 = import_glb(handle_path,location=(0,0,0),scale=(1,1,1),centering=False)
             handle_loaded_2.parent = door_loaded_2
             bpy.ops.object.select_all(action='DESELECT')
             handle_loaded_2.select_set(True)
@@ -393,11 +393,11 @@ for entry in doors_windows:
             bpy.context.view_layer.objects.active = handle_loaded_2
 
             if rotate:
-                bpy.ops.transform.rotate(value=math.radians(90), orient_axis='Y')   
-                bpy.ops.transform.translate(value=(0,0.384,-0.0848))   
+                bpy.ops.transform.rotate(value=math.radians(90), orient_axis='Y')
+                bpy.ops.transform.translate(value=(0,0.384,-0.0848))
             else:
-                bpy.ops.transform.rotate(value=math.radians(90), orient_axis='X')   
-                bpy.ops.transform.translate(value=(0.384,0,-0.0848))   
+                bpy.ops.transform.rotate(value=math.radians(90), orient_axis='X')
+                bpy.ops.transform.translate(value=(0.384,0,-0.0848))
 
 
 
