@@ -299,11 +299,13 @@ for entry in doors_windows:
             pos
 
         )
+
     for ibj in bpy.data.objects:
         print(ibj.name)
 
     subtract_objects(bpy.data.objects[entry['wall0']],asset)
     subtract_objects(bpy.data.objects[entry['wall1']],asset)
+    
     bpy.data.objects.remove(asset)
 
     if "door" in entry['id'].lower():
@@ -315,7 +317,7 @@ for entry in doors_windows:
             doorways = glob.glob(f"{opt.content}/doors/doorway_frame*.glb")
 
         doorway_path = doorways[np.random.randint(0,len(doorways))]
-        asset_loaded = import_glb(doorway_path,location=pos)
+        asset_loaded = import_glb(doorway_path,location=pos,scale=(0.0102,0.0102,0.0102))
 
         if rotate:
             bpy.context.view_layer.objects.active = asset_loaded
@@ -379,10 +381,10 @@ for entry in doors_windows:
         bpy.context.view_layer.objects.active = handle_loaded
         if rotate:
             bpy.ops.transform.rotate(value=math.radians(90), orient_axis='Y')
-            bpy.ops.transform.translate(value=(0,0.384,-0.0848))
+            bpy.ops.transform.translate(value=(0,0.3431,-0.0848))
         else:
             bpy.ops.transform.rotate(value=math.radians(90), orient_axis='X')
-            bpy.ops.transform.translate(value=(-0.384,0,-0.0848))
+            bpy.ops.transform.translate(value=(-0.3431,0,-0.0848))
 
         if 'double' in entry['assetId'].lower():
             handle_loaded_2 = import_glb(handle_path,location=(0,0,0),scale=(1,1,1),centering=False)
@@ -394,10 +396,10 @@ for entry in doors_windows:
 
             if rotate:
                 bpy.ops.transform.rotate(value=math.radians(90), orient_axis='Y')
-                bpy.ops.transform.translate(value=(0,0.384,-0.0848))
+                bpy.ops.transform.translate(value=(0,0.3431,-0.0848))
             else:
                 bpy.ops.transform.rotate(value=math.radians(90), orient_axis='X')
-                bpy.ops.transform.translate(value=(0.384,0,-0.0848))
+                bpy.ops.transform.translate(value=(0.3431,0,-0.0848))
 
 
 
