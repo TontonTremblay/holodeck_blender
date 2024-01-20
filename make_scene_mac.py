@@ -57,10 +57,10 @@ print(len(to_load))
 print(objaverse.__version__)
 # raise()
 
-# objects = objaverse.load_objects(
-#     uids=to_load,
-#     download_processes=1
-# )
+objects = objaverse.load_objects(
+    uids=to_load,
+    download_processes=1
+)
 
 
 import glob 
