@@ -10,6 +10,7 @@ import glob
 # import png 
 import threading
 import bmesh
+from mathutils import Vector
 
 def create_wall_mesh(name, vertices):
     # Create a new mesh
@@ -79,6 +80,12 @@ parser.add_argument(
     '--content',
     help='path to content for loading windows and doors'
 )
+
+parser.add_argument(
+    '--objaverse_path',
+    help='objaverse path'
+)
+
 
 
 argv = sys.argv[sys.argv.index("--") + 1:]
@@ -415,6 +422,52 @@ for entry in doors_windows:
                 bpy.ops.transform.rotate(value=math.radians(90), orient_axis='Z')
 
     # bpy.ops.wm.save_as_mainfile(filepath=opt.output)
+
+
+# load and put objaverse object
+
+def find_file_in_path(path, file_name):
+    for root, dirs, files in os.walk(path):
+        if file_name in files:
+            return os.path.join(root, file_name)
+    return None
+
+
+def get_dimensions_with_hierarchy(obj):
+    # Traverse all children recursively and accumulate dimensions
+    dimensions = obj.dimensions
+
+    for child in obj.children:
+        child_dimensions = get_dimensions_with_hierarchy(child)
+        dim = [dimensions.x,dimensions.y,dimensions.z]
+
+        dim[0] = max(dim[0], child_dimensions.x)
+        dim[1] = max(dim[1], child_dimensions.y)
+        dim[2] = max(dim[2], child_dimensions.z)
+
+        dimensions = Vector(dim)
+
+
+    return dimensions
+
+for obj in data['objects']:
+    file_path = find_file_in_path(opt.objaverse_path,f"{obj['assetId']}.glb")
+    
+    loaded = bpy.ops.import_scene.gltf(filepath=file_path)
+    loaded = bpy.context.view_layer.objects.active
+
+    bpy.ops.object.origin_set(type='GEOMETRY_ORIGIN', center='BOUNDS')
+
+    if obj['rotation']['y'] == 0: 
+        bpy.ops.transform.rotate(value=math.radians(-90), orient_axis='Z')
+    dim = get_dimensions_with_hierarchy(loaded)
+    loaded.location.x = obj['position']['x']
+    loaded.location.y = obj['position']['z']
+    loaded.location.z = dim[2]/2
+
+    print()
+
+    break
 
 
 
