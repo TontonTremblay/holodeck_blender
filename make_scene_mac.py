@@ -33,7 +33,9 @@ parser.add_argument(
 parser.add_argument(
     '--objaverse_path',
     type=str,
-    default='/Users/jtremblay/.objaverse/hf-objaverse-v1/glbs/',
+    default='/Users/jtremblay/code/holodeck_blender/data/aithor/objaverse_holodeck/09_23_combine_scale/processed_2023_09_23_combine_scale/',
+    # default='/Users/jtremblay/.objaverse/hf-objaverse-v1/glbs/',
+    
     help='path to where objaverse downloaded stuff -- could be determined automatically'
     )
 
@@ -50,17 +52,17 @@ with open(opt.json, 'r') as file:
 to_load = []
 
 
-for obj in data['objects']:
-    to_load.append(obj['assetId'])
-print(to_load)
-print(len(to_load))
-print(objaverse.__version__)
+# for obj in data['objects']:
+#     to_load.append(obj['assetId'])
+# print(to_load)
+# print(len(to_load))
+# print(objaverse.__version__)
 # raise()
 
-objects = objaverse.load_objects(
-    uids=to_load,
-    download_processes=1
-)
+# objects = objaverse.load_objects(
+#     uids=to_load,
+#     download_processes=1
+# )
 
 
 import glob 

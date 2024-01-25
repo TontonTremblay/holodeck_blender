@@ -433,42 +433,270 @@ def find_file_in_path(path, file_name):
     return None
 
 
-def get_dimensions_with_hierarchy(obj):
+def get_dimensions_with_hierarchy(obj,rot=True):
     # Traverse all children recursively and accumulate dimensions
+    # print(obj.name)
+    # print(obj.rotation_quaternion.to_matrix())
     dimensions = obj.dimensions
 
     for child in obj.children:
         child_dimensions = get_dimensions_with_hierarchy(child)
+        if rot:
+            child_dimensions = obj.rotation_quaternion.to_matrix() @ child_dimensions
         dim = [dimensions.x,dimensions.y,dimensions.z]
 
-        dim[0] = max(dim[0], child_dimensions.x)
-        dim[1] = max(dim[1], child_dimensions.y)
-        dim[2] = max(dim[2], child_dimensions.z)
+        dim[0] = max(dim[0], abs(child_dimensions.x))
+        dim[1] = max(dim[1], abs(child_dimensions.y))
+        dim[2] = max(dim[2], abs(child_dimensions.z))
 
         dimensions = Vector(dim)
 
 
     return dimensions
 
-for obj in data['objects']:
-    file_path = find_file_in_path(opt.objaverse_path,f"{obj['assetId']}.glb")
+with open('data/objaverse_holodeck_database.json', 'r') as file:
+    data_holodeck = json.load(file)
+
+def reset_transformations_hierarchy(obj):
+    # Reset transform for the current object
+    obj.location = (0, 0, 0)
+    obj.rotation_euler = (0, 0, 0)
+    obj.scale = (1, 1, 1)
+
+    # Recursively reset transform for all children
+    for child in obj.children:
+        reset_transformations_hierarchy(child)
+
+def load_pickled_3d_asset(file_path):
+    import gzip
+    import pickle
+    # Open the compressed pickled file
+    with gzip.open(file_path, 'rb') as f:
+        # Load the pickled object
+        loaded_object_data = pickle.load(f)
+
+    # Create a new mesh object in Blender
+    mesh = bpy.data.meshes.new(name='LoadedMesh')
+    obj = bpy.data.objects.new('LoadedObject', mesh)
+
+    # Link the object to the scene
+    bpy.context.scene.collection.objects.link(obj)
+
+    # Set the mesh data for the object
+    obj.data = mesh
+
+    # Update the mesh with the loaded data
+    print(loaded_object_data.keys())
+    # print(loaded_object_data['triangles'])
+    # triangles = [vertex_index for face in loaded_object_data['triangles'] for vertex_index in face]
+    triangles = np.array(loaded_object_data['triangles']).reshape(-1,3)
+    vertices = []
+
+    for v in loaded_object_data['vertices']:
+        vertices.append([v['x'],v['z'],v['y']])
+
+
+    mesh.from_pydata(vertices, [], triangles)
+
+    uvs = []
+    for uv in loaded_object_data['uvs']:
+        uvs.append([uv['x'],uv['y']]) 
+
+    mesh.update()
+
+    # Ensure UV coordinates are stored
+    if not mesh.uv_layers:
+        mesh.uv_layers.new(name="UVMap")
+
+    uv_layer = mesh.uv_layers["UVMap"]
+    for poly in mesh.polygons:
+        for loop_index in poly.loop_indices:
+            vertex_index = mesh.loops[loop_index].vertex_index
+            uv_layer.data[loop_index].uv = uvs[vertex_index]
     
-    loaded = bpy.ops.import_scene.gltf(filepath=file_path)
-    loaded = bpy.context.view_layer.objects.active
+
+    material = bpy.data.materials.new(name="AlbedoMaterial")
+    obj.data.materials.append(material)
+
+    # Assign albedo color to the material
+    material.use_nodes = True
+    nodes = material.node_tree.nodes
+    principled_bsdf = nodes.get("Principled BSDF")
+
+    texture_node = nodes.new(type='ShaderNodeTexImage')
+
+    image_path = f"{'/'.join(file_path.split('/')[:-1])}/albedo.jpg"  # Replace with your image file path
+    print(image_path)
+    image = bpy.data.images.load(image_path)
+
+    # Assign the image to the texture node
+    texture_node.image = image
+
+    # Connect the texture node to the albedo color
+    material.node_tree.links.new(
+        texture_node.outputs["Color"],
+        principled_bsdf.inputs["Base Color"]
+    )
+
+
+    # normal
+    image_path = f"{'/'.join(file_path.split('/')[:-1])}/normal.jpg"
+    img_normal = bpy.data.images.load(image_path)
+    image_texture_node_normal = material.node_tree.nodes.new(type='ShaderNodeTexImage')
+    image_texture_node_normal.image = img_normal    
+    image_texture_node_normal.image.colorspace_settings.name = 'Non-Color'
+
+    normal_map_node = material.node_tree.nodes.new(type='ShaderNodeNormalMap')
+
+    material.node_tree.links.new(normal_map_node.outputs["Normal"], principled_bsdf.inputs["Normal"])
+    material.node_tree.links.new(image_texture_node_normal.outputs["Color"], normal_map_node.inputs["Color"])
+
+
+
+
+
+    # Assign the material to the object
+    obj.data.materials[0] = material    
+
+    # Update mesh to apply UV changes
+    mesh.update()
+
+
+    # raise()
+
+
+    # Update other properties as needed
+    # obj.location = loaded_object_data['location']
+    # obj.rotation_euler = loaded_object_data['rotation']
+    # obj.scale = loaded_object_data['scale']
+
+    return obj
+
+# def get_scale_factor(target_size, metadata):
+#     if target_size == None: return
+
+#     bounding_box = metadata["assetMetadata"]["boundingBox"]
+#     original_size = (abs(bounding_box["max"]["x"] - bounding_box["min"]["x"]) * 100,
+#                      abs(bounding_box["max"]["y"] - bounding_box["min"]["y"]) * 100,
+#                      abs(bounding_box["max"]["z"] - bounding_box["min"]["z"]) * 100)
+    
+#     for i in range(3):
+#         if original_size[i] == 0:
+#             original_size[i] = 1
+#     try:    
+#         original_size_ordered = sorted(original_size)
+#         target_size_ordered = sorted(target_size)
+
+#         scale_factors = [target_size_ordered[i] / original_size_ordered[i] for i in range(3)]
+#         scale_factor = np.mean(scale_factors)
+
+#         if scale_factor > 1.3: scale_factor = 1.3
+#         elif scale_factor < 1.0: scale_factor = 1.0
+
+#         return scale_factor
+    
+#     except:
+#         return None
+
+
+# for i_obj, obj in enumerate(data['objects']):
+#     file_path = find_file_in_path(opt.objaverse_path,f"{obj['assetId']}.glb")
+#     # print(opt.objaverse_path,f"{obj['assetId']}.glb")
+#     # break
+#     if file_path is None:
+#         continue
+#     bpy.ops.import_scene.gltf(filepath=file_path)
+
+#     # loaded = load_pickled_3d_asset(f"{opt.objaverse_path}/{obj['assetId']}/{obj['assetId']}.pkl.gz")
+#     # bpy.ops.object.select_all(action='DESELECT')
+#     # loaded.select_set(True)
+#     # bpy.context.view_layer.objects.active = loaded
+
+#     loaded = bpy.context.view_layer.objects.active
+#     loaded.select_set(True)
+    
+
+#     # bpy.ops.object.origin_set(type='GEOMETRY_ORIGIN', center='BOUNDS')
+#     # reset_transformations_hierarchy(loaded)
+
+#     # if not obj['rotation']['y'] == 0: 
+#     #     bpy.ops.transform.rotate(value=math.radians(obj['rotation']['y']), orient_axis='Z')
+
+#     dim = get_dimensions_with_hierarchy(loaded)
+#     holo_dim = data_holodeck[obj['assetId']]['assetMetadata']['boundingBox']
+
+#     # scale = dim[0]/holo_dim['x']
+#     # bpy.ops.transform.resize(value=[1/scale,1/scale,1/scale])
+
+#     # dim = get_dimensions_with_hierarchy(loaded)
+
+#     # print(dim)
+
+#     loaded.location.x = obj['position']['x']
+#     loaded.location.y = obj['position']['z']
+#     # loaded.location.z = obj['position']['y']
+#     loaded.location.z = dim[2]/2
+
+
+#     # 7.52757
+
+
+#     print()
+
+#     if i_obj>9:
+#         break
+#     # break
+
+for i_obj, obj in enumerate(data['objects']):
+    # file_path = find_file_in_path(opt.objaverse_path,f"{obj['assetId']}.glb")
+    # print(opt.objaverse_path,f"{obj['assetId']}.glb")
+    # break
+    # if file_path is None:
+    #     continue
+    # bpy.ops.import_scene.gltf(filepath=file_path)
+
+    # loaded = bpy.context.view_layer.objects.active
+    # loaded.select_set(True)
+
+    if not os.path.exists(f"{opt.objaverse_path}/{obj['assetId']}/{obj['assetId']}.pkl.gz"):
+        print(obj['assetId'])
+        continue
+
+    loaded = load_pickled_3d_asset(f"{opt.objaverse_path}/{obj['assetId']}/{obj['assetId']}.pkl.gz")
+    bpy.ops.object.select_all(action='DESELECT')
+    loaded.select_set(True)
+    bpy.context.view_layer.objects.active = loaded    
 
     bpy.ops.object.origin_set(type='GEOMETRY_ORIGIN', center='BOUNDS')
+    # reset_transformations_hierarchy(loaded)
 
-    if obj['rotation']['y'] == 0: 
-        bpy.ops.transform.rotate(value=math.radians(-90), orient_axis='Z')
+    if not obj['rotation']['y'] == 0: 
+        bpy.ops.transform.rotate(value=math.radians(obj['rotation']['y']), orient_axis='Z')
+
     dim = get_dimensions_with_hierarchy(loaded)
+    holo_dim = data_holodeck[obj['assetId']]['assetMetadata']['boundingBox']
+
+    # scale = dim[0]/holo_dim['x']
+    # bpy.ops.transform.resize(value=[1/scale,1/scale,1/scale])
+
+    # dim = get_dimensions_with_hierarchy(loaded)
+
+    # print(dim)
+
     loaded.location.x = obj['position']['x']
     loaded.location.y = obj['position']['z']
-    loaded.location.z = dim[2]/2
+    loaded.location.z = obj['position']['y']
+    # loaded.location.z = dim[2]/2
+
+
+    # 7.52757
+
 
     print()
 
-    break
-
+    # if i_obj>9:
+    #     break
+    # break
 
 
 bpy.ops.wm.save_as_mainfile(filepath=opt.output)
