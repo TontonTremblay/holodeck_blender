@@ -13,3 +13,4 @@ gdown 1MQbFbNfTz94x8Pxfkgbohz4l46O5e3G1
 or download them here: 
 - https://drive.google.com/file/d/1ZvUJZ_Qx43pZR2jPAX5DdEtya6JG_QEt/view
 - https://drive.google.com/file/d/1MQbFbNfTz94x8Pxfkgbohz4l46O5e3G1/view
+- (textures) https://drive.google.com/file/d/18YU3npGXKq58GN1jNTbiXu3S7Im1C4Iq/view
