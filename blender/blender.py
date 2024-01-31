@@ -57,6 +57,12 @@ def create_wall_mesh(name, vertices):
 from bpy_extras.image_utils import load_image
 
 
+def is_image_loaded(image_filepath):
+    for image in bpy.data.images:
+        if image.filepath == image_filepath:
+            return image
+    return None
+
 
 
 def add_material(obj,path_texture, add_uv = False, material_pos = -1):
@@ -102,11 +108,16 @@ def add_material(obj,path_texture, add_uv = False, material_pos = -1):
 
     # Create an image texture node
     image_texture_node = node_tree.nodes.new(type='ShaderNodeTexImage')
-    image = load_image(f"{path_texture}/{name}_2K-JPG_Color.jpg", new_material)
+    
+    image = is_image_loaded(f"{path_texture}/{name}_2K-JPG_Color.jpg")
+    if image is None:
+        image = load_image(f"{path_texture}/{name}_2K-JPG_Color.jpg", new_material)
     image_texture_node.image = image
 
     # # normal
-    img_normal = load_image(f"{path_texture}/{name}_2K-JPG_NormalGL.jpg", new_material)
+    img_normal = is_image_loaded(f"{path_texture}/{name}_2K-JPG_NormalGL.jpg")
+    if img_normal is None:
+        img_normal = load_image(f"{path_texture}/{name}_2K-JPG_NormalGL.jpg", new_material)
     image_texture_node_normal = node_tree.nodes.new(type='ShaderNodeTexImage')
     image_texture_node_normal.image = img_normal    
     image_texture_node_normal.image.colorspace_settings.name = 'Non-Color'
@@ -119,7 +130,9 @@ def add_material(obj,path_texture, add_uv = False, material_pos = -1):
 
     # rough
     if os.path.exists(f"{path_texture}/{name}_2K-JPG_Roughness.jpg"):
-        img_rough = load_image(f"{path_texture}/{name}_2K-JPG_Roughness.jpg",new_material)
+        img_rough = is_image_loaded(f"{path_texture}/{name}_2K-JPG_Roughness.jpg")
+        if img_rough is None:
+            img_rough = load_image(f"{path_texture}/{name}_2K-JPG_Roughness.jpg", new_material)
 
         image_texture_node_rough = node_tree.nodes.new(type='ShaderNodeTexImage')
         image_texture_node_rough.image = img_rough    
@@ -129,8 +142,9 @@ def add_material(obj,path_texture, add_uv = False, material_pos = -1):
 
     # metal
     if os.path.exists(f"{path_texture}/{name}_2K-JPG_Metalness.jpg"):
-
-        img_metal = load_image(f"{path_texture}/{name}_2K-JPG_Metalness.jpg",new_material)
+        img_metal = is_image_loaded(f"{path_texture}/{name}_2K-JPG_Metalness.jpg")
+        if img_metal is None:
+            img_metal = load_image(f"{path_texture}/{name}_2K-JPG_Metalness.jpg", new_material)
 
         image_texture_node_metal = node_tree.nodes.new(type='ShaderNodeTexImage')
         image_texture_node_metal.image = img_metal    
@@ -412,9 +426,11 @@ for floor in data['rooms']:
 
     if not floor["id"] in floor_room_text:
         # asset = floor['material']['ambientcg']
-        asset = 'Concrete'
+        # asset = 'Concrete'
+        asset = floor['floorMaterial']['ambientcg']
         asset_path = all_texture_by_class[asset][np.random.randint(0,len(all_texture_by_class[asset])-1)]
         floor_room_text[floor['id']] = asset_path
+        print(asset_path)
     add_material(obj,floor_room_text[floor['id']])
 
 
