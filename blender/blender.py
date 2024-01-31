@@ -52,6 +52,102 @@ def create_wall_mesh(name, vertices):
     # Update the mesh with the BMesh data
     bm.to_mesh(mesh)
     bm.free()
+    return obj 
+
+from bpy_extras.image_utils import load_image
+
+
+
+
+def add_material(obj,path_texture, add_uv = False, material_pos = -1):
+    if add_uv:
+        bpy.ops.object.select_all(action='DESELECT')
+        bpy.context.view_layer.objects.active = obj
+
+        obj.select_set(True)
+
+        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.mesh.select_all(action='SELECT')
+
+        # Unwrap using Smart UV Project
+        bpy.ops.uv.smart_project()
+        # bpy.ops.uv.unwrap(method='ANGLE_BASED', margin=0.001)
+
+        # Switch back to Object mode
+        bpy.ops.object.mode_set(mode='OBJECT')
+
+    name = path_texture.split("/")[-2]
+    bpy.context.view_layer.objects.active = obj
+
+    # Create a new material
+    new_material = bpy.data.materials.new(name=f"{obj.name}_Material")
+    
+    # Link the material to the object
+    # print(len(obj.data.materials))
+    if material_pos == -1 or len(obj.data.materials) ==0:
+        obj.data.materials.clear()
+
+        obj.data.materials.append(new_material)
+    else:
+        obj.data.materials[material_pos] = new_material
+
+    new_material.use_nodes = True
+    node_tree = new_material.node_tree
+
+    # Clear default nodes
+    for node in node_tree.nodes:
+        node_tree.nodes.remove(node)
+
+    principled_node = node_tree.nodes.new(type='ShaderNodeBsdfPrincipled')
+
+    # Create an image texture node
+    image_texture_node = node_tree.nodes.new(type='ShaderNodeTexImage')
+    image = load_image(f"{path_texture}/{name}_2K-JPG_Color.jpg", new_material)
+    image_texture_node.image = image
+
+    # # normal
+    img_normal = load_image(f"{path_texture}/{name}_2K-JPG_NormalGL.jpg", new_material)
+    image_texture_node_normal = node_tree.nodes.new(type='ShaderNodeTexImage')
+    image_texture_node_normal.image = img_normal    
+    image_texture_node_normal.image.colorspace_settings.name = 'Non-Color'
+
+    normal_map_node = node_tree.nodes.new(type='ShaderNodeNormalMap')
+
+    node_tree.links.new(normal_map_node.outputs["Normal"], principled_node.inputs["Normal"])
+    node_tree.links.new(image_texture_node_normal.outputs["Color"], normal_map_node.inputs["Color"])
+
+
+    # rough
+    if os.path.exists(f"{path_texture}/{name}_2K-JPG_Roughness.jpg"):
+        img_rough = load_image(f"{path_texture}/{name}_2K-JPG_Roughness.jpg",new_material)
+
+        image_texture_node_rough = node_tree.nodes.new(type='ShaderNodeTexImage')
+        image_texture_node_rough.image = img_rough    
+        image_texture_node_rough.image.colorspace_settings.name = 'Non-Color'
+
+        node_tree.links.new(image_texture_node_rough.outputs["Color"], principled_node.inputs["Roughness"])
+
+    # metal
+    if os.path.exists(f"{path_texture}/{name}_2K-JPG_Metalness.jpg"):
+
+        img_metal = load_image(f"{path_texture}/{name}_2K-JPG_Metalness.jpg",new_material)
+
+        image_texture_node_metal = node_tree.nodes.new(type='ShaderNodeTexImage')
+        image_texture_node_metal.image = img_metal    
+        image_texture_node_metal.image.colorspace_settings.name = 'Non-Color'
+
+        node_tree.links.new(image_texture_node_metal.outputs["Color"], principled_node.inputs["Metallic"])
+
+
+
+    # connecting
+    node_tree.links.new(image_texture_node.outputs["Color"], principled_node.inputs["Base Color"])
+    
+    material_output_node = node_tree.nodes.new(type='ShaderNodeOutputMaterial')
+    node_tree.links.new(principled_node.outputs["BSDF"], material_output_node.inputs["Surface"])
+
+
+
 
 ###################
 ###################
@@ -124,13 +220,13 @@ def add_wall(wall):
     wall_vertices = np.array(wall_vertices)
 
     if 'west' in wall['id']:
-        wall_vertices[:,0]-=eps
-    if 'east' in wall['id']:
         wall_vertices[:,0]+=eps
+    if 'east' in wall['id']:
+        wall_vertices[:,0]-=eps
     if 'north' in wall['id']:
-        wall_vertices[:,1]+=eps
-    if 'south' in wall['id']:
         wall_vertices[:,1]-=eps
+    if 'south' in wall['id']:
+        wall_vertices[:,1]+=eps
 
     if 'west' in wall['id'] and 'exterior' in wall['id']:
         wall_vertices[:,0]-=eps*2
@@ -248,7 +344,24 @@ for floor in data['rooms']:
     for vert in floor['vertices']:
         floor_vertices.append((vert[0],vert[1],0))
     floor_vertices = np.array(floor_vertices)
-    create_wall_mesh(floor['id'],floor_vertices)
+    obj = create_wall_mesh(floor['id'],floor_vertices)
+
+    bpy.ops.object.select_all(action='DESELECT')
+    obj.select_set(True)
+
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.select_all(action='SELECT')
+
+    # Unwrap using Smart UV Project
+    bpy.ops.uv.smart_project()
+    # bpy.ops.uv.unwrap(method='ANGLE_BASED', margin=0.001)
+
+    # Switch back to Object mode
+    bpy.ops.object.mode_set(mode='OBJECT')
+
+    add_material(obj,"assets/textures/Concrete040/")
+    # add_material(obj,"assets/textures/WoodSiding008/")
+
 
 doors_windows = []
 for entry in data['doors']:
@@ -326,6 +439,9 @@ for entry in doors_windows:
         doorway_path = doorways[np.random.randint(0,len(doorways))]
         asset_loaded = import_glb(doorway_path,location=pos,scale=(0.0102,0.0102,0.0102))
 
+        add_material(asset_loaded,"assets/textures/WoodSiding001/",add_uv =True)
+
+
         if rotate:
             bpy.context.view_layer.objects.active = asset_loaded
             bpy.ops.transform.rotate(value=math.radians(90), orient_axis='Z')
@@ -335,6 +451,7 @@ for entry in doors_windows:
         doors = glob.glob(f"{opt.content}/doors/doorway_door*.glb")
         door_path = doors[np.random.randint(0,len(doors))]
         door_loaded = import_glb(door_path,location=(0,0,0),scale=(1,1,1))
+        add_material(door_loaded,"assets/textures/WoodSiding002/",add_uv =True)
         door_loaded.parent = asset_loaded
 
         if rotate:
@@ -349,6 +466,7 @@ for entry in doors_windows:
 
         if 'double' in entry['assetId'].lower():
             door_loaded_2 = import_glb(door_path,location=(0,0,0),scale=(1,1,1))
+            add_material(door_loaded_2,"assets/textures/WoodSiding002/",add_uv =True)
             door_loaded_2.parent = asset_loaded
 
             if rotate:
@@ -378,6 +496,7 @@ for entry in doors_windows:
         handles = glob.glob(f"{opt.content}/doors/doorway_handle*.glb")
         handle_path = handles[np.random.randint(0,len(handles))]
         handle_loaded = import_glb(handle_path,location=(0,0,0),scale=(1,1,1),centering=False)
+        add_material(handle_loaded,"assets/textures/PaintedMetal001/",add_uv =True)
         # for handle in handles:
         #     handle_loaded = import_glb(handle,location=(0,0,0),scale=(1,1,1),centering=False)        
         # bpy.ops.wm.save_as_mainfile(filepath=opt.output)
@@ -395,7 +514,10 @@ for entry in doors_windows:
 
         if 'double' in entry['assetId'].lower():
             handle_loaded_2 = import_glb(handle_path,location=(0,0,0),scale=(1,1,1),centering=False)
+            add_material(handle_loaded_2,"assets/textures/PaintedMetal001/",add_uv =True)
+            
             handle_loaded_2.parent = door_loaded_2
+
             bpy.ops.object.select_all(action='DESELECT')
             handle_loaded_2.select_set(True)
 
@@ -415,6 +537,8 @@ for entry in doors_windows:
         # load the asset
         asset_loaded = import_glb(f"{opt.content}/{entry['id'].split('|')[0]}s/{entry['assetId'].lower()}.glb",
             location=pos)
+        add_material(asset_loaded,"assets/textures/Wood080/",add_uv =True,material_pos=0)
+
         if asset_loaded:
             asset_loaded.name = entry['id']
             if rotate:
@@ -424,6 +548,90 @@ for entry in doors_windows:
     # bpy.ops.wm.save_as_mainfile(filepath=opt.output)
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# go over the walls and then join the ones that are together. 
+
+# find the rooms: 
+rooms = {}
+
+for obj in bpy.context.scene.objects:
+    print("Object Name:", obj.name)
+    if 'exterior' in obj.name or 'window' in obj.name:
+        continue
+
+    if 'wall' in obj.name:
+        splitted = obj.name.split("|")
+        if not splitted[1] in rooms:
+            rooms[splitted[1]] = []
+        rooms[splitted[1]].append(obj)
+
+        bpy.ops.object.select_all(action='DESELECT')
+        obj.select_set(True)
+
+        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.mesh.select_all(action='SELECT')
+
+        # Unwrap using Smart UV Project
+        bpy.ops.uv.smart_project()
+        # bpy.ops.uv.unwrap(method='ANGLE_BASED', margin=0.001)
+
+        # Switch back to Object mode
+        bpy.ops.object.mode_set(mode='OBJECT')
+
+        # add_material(obj,"assets/textures/Concrete040/")
+        add_material(obj,"assets/textures/WoodSiding008/")
+
+
+print(rooms.keys())
+
+
+
+
+
+
+# 
+# 
+# 
+# 
+# 
+
+# for room in rooms.keys():
+#     bpy.ops.object.select_all(action='DESELECT')
+#     rooms[room][0].select_set(True)
+#     # bpy.context.scene.objects.active = rooms[room][0]
+#     bpy.context.view_layer.objects.active = rooms[room][0]
+#     for i_wall in range(1,len(rooms[room])):
+#         obj = rooms[room][i_wall] 
+#         obj.select_set(True)
+#         bpy.context.view_layer.objects.active = obj
+#         bpy.ops.object.join()
+
+#     bpy.ops.object.mode_set(mode='EDIT')
+#     bpy.ops.mesh.select_all(action='SELECT')
+
+#     # Unwrap using Smart UV Project
+#     bpy.ops.uv.smart_project()
+#     bpy.ops.object.mode_set(mode='OBJECT')
+
+    # add_material(obj,"assets/textures/WoodSiding008/")
+# raise()
 # load and put objaverse object
 
 def find_file_in_path(path, file_name):
@@ -486,7 +694,7 @@ def load_pickled_3d_asset(file_path):
     obj.data = mesh
 
     # Update the mesh with the loaded data
-    print(loaded_object_data.keys())
+    # print(loaded_object_data.keys())
     # print(loaded_object_data['triangles'])
     # triangles = [vertex_index for face in loaded_object_data['triangles'] for vertex_index in face]
     triangles = np.array(loaded_object_data['triangles']).reshape(-1,3)
@@ -526,7 +734,7 @@ def load_pickled_3d_asset(file_path):
     texture_node = nodes.new(type='ShaderNodeTexImage')
 
     image_path = f"{'/'.join(file_path.split('/')[:-1])}/albedo.jpg"  # Replace with your image file path
-    print(image_path)
+
     image = bpy.data.images.load(image_path)
 
     # Assign the image to the texture node
@@ -692,11 +900,29 @@ for i_obj, obj in enumerate(data['objects']):
     # 7.52757
 
 
-    print()
+    # print()
 
     # if i_obj>9:
     #     break
     # break
+
+
+for light in data["proceduralParameters"]['lights']:
+
+    bpy.ops.object.light_add(type='POINT', 
+        location=(
+            light['position']['x'], 
+            light['position']['z'], 
+            light['position']['y']
+        )
+    )
+
+    # Access the newly added light object
+    point_light = bpy.context.object
+
+    # Set light properties (optional)
+    point_light.data.energy = 400  # Adjust the light intensity
+
 
 
 bpy.ops.wm.save_as_mainfile(filepath=opt.output)
