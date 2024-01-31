@@ -146,72 +146,6 @@ def add_material(obj,path_texture, add_uv = False, material_pos = -1):
     material_output_node = node_tree.nodes.new(type='ShaderNodeOutputMaterial')
     node_tree.links.new(principled_node.outputs["BSDF"], material_output_node.inputs["Surface"])
 
-
-
-
-###################
-###################
-###################
-###################
-###################
-###################
-###################
-###################
-###################
-
-parser = argparse.ArgumentParser(description='Renders given obj file by rotation a camera around it.')
-
-parser.add_argument(
-    '--output', 
-    type=str, 
-    default='/media/jtremblay/bf64b840-723c-4e19-9dbc-f6a092b66406/home/jtremblay/data/shapenet/renders/',
-    help='The path the output will be dumped to.'
-)
-parser.add_argument(
-    '--json',
-    help='path to the json to load from holodeck'
-)
-
-parser.add_argument(
-    '--content',
-    help='path to content for loading windows and doors'
-)
-
-parser.add_argument(
-    '--objaverse_path',
-    help='objaverse path'
-)
-
-
-
-argv = sys.argv[sys.argv.index("--") + 1:]
-opt = parser.parse_args(argv)
-
-
-
-# Clear existing mesh objects and lights in the scene
-bpy.ops.object.select_all(action='DESELECT')
-bpy.ops.object.select_by_type(type='MESH')
-bpy.ops.object.delete()
-
-# Create a new empty scene
-bpy.ops.scene.new(type='EMPTY')
-
-# Set the new empty scene as the active scene
-bpy.context.window.scene = bpy.context.scene
-
-# Update the user interface
-bpy.context.view_layer.update()
-
-
-
-
-# load the holodeck scene
-
-with open(opt.json, 'r') as file:
-    data = json.load(file)
-
-
 def add_wall(wall):
     wall_vertices = []
     eps = 0.005
@@ -237,7 +171,8 @@ def add_wall(wall):
     if 'south' in wall['id'] and 'exterior' in wall['id']:
         wall_vertices[:,1]-=eps*2
 
-    create_wall_mesh(wall['id'],wall_vertices)    
+    obj = create_wall_mesh(wall['id'],wall_vertices)    
+    return obj 
 
 def create_cube(name, min_xyz, max_xyz,location,rotate=False):
     # Calculate dimensions of the cube
@@ -333,11 +268,127 @@ def import_glb(file_path, location=(0, 0, 0), rotation=(0, 0, 0), scale=(0.01, 0
 
 
 
+
+
+###################
+###################
+###################
+###################
+###################
+###################
+###################
+###################
+###################
+
+parser = argparse.ArgumentParser(description='Renders given obj file by rotation a camera around it.')
+
+parser.add_argument(
+    '--output', 
+    type=str, 
+    default='/media/jtremblay/bf64b840-723c-4e19-9dbc-f6a092b66406/home/jtremblay/data/shapenet/renders/',
+    help='The path the output will be dumped to.'
+)
+parser.add_argument(
+    '--json',
+    help='path to the json to load from holodeck'
+)
+
+parser.add_argument(
+    '--content',
+    help='path to content for loading windows and doors'
+)
+
+parser.add_argument(
+    '--objaverse_path',
+    help='objaverse path'
+)
+
+
+
+argv = sys.argv[sys.argv.index("--") + 1:]
+opt = parser.parse_args(argv)
+
+
+
+# Clear existing mesh objects and lights in the scene
+bpy.ops.object.select_all(action='DESELECT')
+bpy.ops.object.select_by_type(type='MESH')
+bpy.ops.object.delete()
+
+# Create a new empty scene
+bpy.ops.scene.new(type='EMPTY')
+
+# Set the new empty scene as the active scene
+bpy.context.window.scene = bpy.context.scene
+
+# Update the user interface
+bpy.context.view_layer.update()
+
+
+
+
+# load the holodeck scene
+
+with open(opt.json, 'r') as file:
+    data = json.load(file)
+
+
+
 wall_by_id = {}
 
+all_texture_by_class = {}
+
+folder_path = 'assets/textures/'
+
+subfolders = [f for f in os.listdir(folder_path) if os.path.isdir(os.path.join(folder_path, f))]
+
+# Iterate through each subfolder
+for folder in subfolders:
+    # Remove digits from the folder name
+    name_without_digits = ''.join(filter(str.isalpha, folder))
+    if name_without_digits[-1].isupper():
+        name_without_digits = name_without_digits[:-1]
+    # Add the name without digits to the set
+    # unique_names.add(name_without_digits)
+    if not name_without_digits in all_texture_by_class:
+        all_texture_by_class[name_without_digits] = []
+    all_texture_by_class[name_without_digits].append(f"{folder_path}{folder}/")
+
+tex_room = {}
+
 for wall in data['walls']:
-    add_wall(wall)
+    obj = add_wall(wall)
     wall_by_id[wall['id']]=wall
+
+    
+
+    if 'exterior' in obj.name or 'window' in obj.name:
+        continue
+
+    bpy.ops.object.select_all(action='DESELECT')
+    obj.select_set(True)
+
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.select_all(action='SELECT')
+
+    # Unwrap using Smart UV Project
+    bpy.ops.uv.smart_project()
+    # bpy.ops.uv.unwrap(method='ANGLE_BASED', margin=0.001)
+
+    # Switch back to Object mode
+    bpy.ops.object.mode_set(mode='OBJECT')
+
+    # add_material(obj,"assets/textures/Concrete040/")
+    # "Paint"
+    if not wall["roomId"] in tex_room:
+        asset = wall['material']['ambientcg']
+        asset_path = all_texture_by_class[asset][np.random.randint(0,len(all_texture_by_class[asset])-1)]
+        tex_room[wall['roomId']] = asset_path
+    add_material(obj,tex_room[wall['roomId']])
+
+
+
+floor_room_text = {}
 
 for floor in data['rooms']:
     floor_vertices = []
@@ -359,7 +410,15 @@ for floor in data['rooms']:
     # Switch back to Object mode
     bpy.ops.object.mode_set(mode='OBJECT')
 
-    add_material(obj,"assets/textures/Concrete040/")
+    if not floor["id"] in floor_room_text:
+        # asset = floor['material']['ambientcg']
+        asset = 'Concrete'
+        asset_path = all_texture_by_class[asset][np.random.randint(0,len(all_texture_by_class[asset])-1)]
+        floor_room_text[floor['id']] = asset_path
+    add_material(obj,floor_room_text[floor['id']])
+
+
+    # add_material(obj,"assets/textures/Concrete040/")
     # add_material(obj,"assets/textures/WoodSiding008/")
 
 
@@ -438,8 +497,9 @@ for entry in doors_windows:
 
         doorway_path = doorways[np.random.randint(0,len(doorways))]
         asset_loaded = import_glb(doorway_path,location=pos,scale=(0.0102,0.0102,0.0102))
-
-        add_material(asset_loaded,"assets/textures/WoodSiding001/",add_uv =True)
+        texture_doorway = all_texture_by_class["PaintedWood"][np.random.randint(0,len(all_texture_by_class["PaintedWood"])-1)]
+        texture_door = all_texture_by_class["Paint"][np.random.randint(0,len(all_texture_by_class["Paint"])-1)]
+        add_material(asset_loaded,texture_doorway,add_uv =True)
 
 
         if rotate:
@@ -451,7 +511,7 @@ for entry in doors_windows:
         doors = glob.glob(f"{opt.content}/doors/doorway_door*.glb")
         door_path = doors[np.random.randint(0,len(doors))]
         door_loaded = import_glb(door_path,location=(0,0,0),scale=(1,1,1))
-        add_material(door_loaded,"assets/textures/WoodSiding002/",add_uv =True)
+        add_material(door_loaded,texture_door,add_uv =True)
         door_loaded.parent = asset_loaded
 
         if rotate:
@@ -466,7 +526,7 @@ for entry in doors_windows:
 
         if 'double' in entry['assetId'].lower():
             door_loaded_2 = import_glb(door_path,location=(0,0,0),scale=(1,1,1))
-            add_material(door_loaded_2,"assets/textures/WoodSiding002/",add_uv =True)
+            add_material(door_loaded_2,texture_door,add_uv =True)
             door_loaded_2.parent = asset_loaded
 
             if rotate:
@@ -496,7 +556,9 @@ for entry in doors_windows:
         handles = glob.glob(f"{opt.content}/doors/doorway_handle*.glb")
         handle_path = handles[np.random.randint(0,len(handles))]
         handle_loaded = import_glb(handle_path,location=(0,0,0),scale=(1,1,1),centering=False)
-        add_material(handle_loaded,"assets/textures/PaintedMetal001/",add_uv =True)
+
+        handle_texture = all_texture_by_class["Metal"][np.random.randint(0,len(all_texture_by_class["Metal"])-1)]
+        add_material(handle_loaded,handle_texture,add_uv =True)
         # for handle in handles:
         #     handle_loaded = import_glb(handle,location=(0,0,0),scale=(1,1,1),centering=False)        
         # bpy.ops.wm.save_as_mainfile(filepath=opt.output)
@@ -573,31 +635,6 @@ rooms = {}
 
 for obj in bpy.context.scene.objects:
     print("Object Name:", obj.name)
-    if 'exterior' in obj.name or 'window' in obj.name:
-        continue
-
-    if 'wall' in obj.name:
-        splitted = obj.name.split("|")
-        if not splitted[1] in rooms:
-            rooms[splitted[1]] = []
-        rooms[splitted[1]].append(obj)
-
-        bpy.ops.object.select_all(action='DESELECT')
-        obj.select_set(True)
-
-        bpy.ops.object.mode_set(mode='EDIT')
-        bpy.ops.mesh.select_all(action='SELECT')
-
-        # Unwrap using Smart UV Project
-        bpy.ops.uv.smart_project()
-        # bpy.ops.uv.unwrap(method='ANGLE_BASED', margin=0.001)
-
-        # Switch back to Object mode
-        bpy.ops.object.mode_set(mode='OBJECT')
-
-        # add_material(obj,"assets/textures/Concrete040/")
-        add_material(obj,"assets/textures/WoodSiding008/")
-
 
 print(rooms.keys())
 

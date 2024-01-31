@@ -14,7 +14,7 @@ parser.add_argument(
 parser.add_argument(
     '--json', 
     type=str, 
-    default='./data/example.json',
+    default='./data/example_added.json',
     help='path for saving rendered image'
 )
 parser.add_argument(
