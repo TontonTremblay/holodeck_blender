@@ -14,7 +14,7 @@ filtered_df = df[df['downloadAttribute'].str.contains('2K-JPG')]
 
 import requests
 import os
-import zipfile 
+import zipfile
 
 # Function to download file from URL
 def download_file(url, destination):
@@ -28,13 +28,17 @@ def download_file(url, destination):
 
 for index, row in filtered_df.iterrows():
     print(row)
-    print(row['downloadLink'])
     zip_file_path = f"assets/textures/{row['assetId']}.zip"
     destination_folder = f"assets/textures/{row['assetId']}/"
     if not os.path.exists(destination_folder):
         os.makedirs(destination_folder)
+    elif not os.listdir(destination_folder):
+        # if the directory is empty, don't skip
+        pass
     else:
+        print('===== skipping =====')
         continue
+    print(row['downloadLink'])
 
     download_file(row['downloadLink'],zip_file_path)
     # Open the zip file for reading

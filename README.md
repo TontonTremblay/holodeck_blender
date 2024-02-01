@@ -5,9 +5,14 @@
 ## data preparation
 to download the preprocessed assets and the labeled json file used in the original holodeck, run
 ```
+# download assets
 cd data
 gdown 1ZvUJZ_Qx43pZR2jPAX5DdEtya6JG_QEt
 gdown 1MQbFbNfTz94x8Pxfkgbohz4l46O5e3G1
+
+# download textures
+cd ../assets
+gdown 18YU3npGXKq58GN1jNTbiXu3S7Im1C4Iq
 ```
 
 or download them here: 
